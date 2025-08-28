@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
 
-## Project info
+# Orthognathic Surgery Web Application
 
-**URL**: https://lovable.dev/projects/519b2946-4c1b-4010-81ad-b65834ede77e
+>A modern, full-featured platform for orthognathic surgery planning, patient management, and clinical collaboration.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 Project Overview
 
-**Use Lovable**
+Orthognathic Surgery Web Application is a next-generation tool designed to assist surgeons, clinicians, and patients in the planning and management of orthognathic (jaw) surgeries. The platform streamlines workflows, enhances communication, and provides a user-friendly interface for all stakeholders.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/519b2946-4c1b-4010-81ad-b65834ede77e) and start prompting.
+## 🌟 Key Features
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Comprehensive Dashboard:** Centralized access for doctors and patients to manage cases, appointments, and clinical data.
+- **AI-Powered Tools:** Integrations for AI-based image analysis and chatbot support for patient queries.
+- **Secure Authentication:** Role-based access for doctors and patients with secure login and signup.
+- **Clinic Finder:** Easily locate and connect with clinics specializing in orthognathic surgery.
+- **Media Gallery:** Upload and review clinical images, X-rays, and surgical plans.
+- **Multilingual Support:** Switch between languages for a global user base.
+- **Modern UI/UX:** Built with shadcn-ui and Tailwind CSS for a clean, responsive experience.
 
-**Use your preferred IDE**
+## 🛠️ Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Frontend:** React, TypeScript, Vite
+- **UI Framework:** shadcn-ui, Tailwind CSS
+- **State & Context:** React Context API
+- **Other:** Vite, PostCSS
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🌐 Live Demo
 
-Follow these steps:
+
+
+## 📦 Getting Started
+
+Clone and run locally:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone https://github.com/ahmad1adel/Orthognathic-Surgery-GP.git
+cd Orthognathic-Surgery-GP
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 🚢 Deployment
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
 
-**Use GitHub Codespaces**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🤝 Contributing
 
-## What technologies are used for this project?
+Contributions are welcome! Please fork the repository, create a new branch, and submit a pull request.
 
-This project is built with:
+## 📄 License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This project is licensed under the MIT License.
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/519b2946-4c1b-4010-81ad-b65834ede77e) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For questions or support, please contact the project maintainer or open an issue.
