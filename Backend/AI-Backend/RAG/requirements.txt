@@ -1,0 +1,15 @@
+flask
+flask-cors
+python-dotenv
+pypdf
+langchain
+langchain-core
+langchain-community
+langchain-huggingface
+langchain-groq
+langchain-postgres
+langchain-text-splitters
+sentence-transformers
+rank-bm25
+pgvector
+psycopg
