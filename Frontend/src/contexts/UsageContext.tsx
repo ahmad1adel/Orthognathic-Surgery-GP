@@ -3,208 +3,186 @@ import { useAuth } from './AuthContext';
 
 export type Plan =
   | 'free'
-  // patient plans
-  | 'patient_basic'
-  | 'patient_standard'
-  | 'patient_premium'
-  // doctor plans
-  | 'doctor_starter'
-  | 'doctor_professional'
-  | 'doctor_enterprise';
+  | 'patient_basic' | 'patient_standard' | 'patient_premium'
+  | 'doctor_starter' | 'doctor_professional' | 'doctor_enterprise';
 
 export interface UsageLimits {
   cnn: number;   // -1 = unlimited
-  gan: number;   // -1 = unlimited
-  chat: number;  // -1 = unlimited (per day)
+  gan: number;
+  chat: number;
 }
 
-interface StoredUsage {
+interface UsageState {
   plan: Plan;
-  cnnUsed: number;        // total free uses (resets on upgrade)
-  ganUsed: number;        // total free uses (resets on upgrade)
-  chatDate: string;       // YYYY-MM-DD
-  chatUsed: number;       // resets daily
-  planMonth: string;      // YYYY-MM for monthly paid resets
-  cnnMonthUsed: number;   // paid plan monthly counter
-  ganMonthUsed: number;   // paid plan monthly counter
-}
-
-interface UsageContextType {
-  plan: Plan;
+  planStartedAt: string | null;
+  planExpiresAt: string | null;
+  limits: UsageLimits;
+  freeLimits: UsageLimits;
   cnnUsed: number;
   ganUsed: number;
   chatUsed: number;
-  limits: UsageLimits;
   canUseCNN: boolean;
   canUseGAN: boolean;
   canUseChat: boolean;
+}
+
+interface UsageContextType extends UsageState {
+  loading: boolean;
   recordCNN: () => void;
   recordGAN: () => void;
   recordChat: () => void;
-  upgradePlan: (p: Plan) => void;
+  upgradePlan: (p: Plan) => Promise<void>;
+  cancelPlan: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
-
-const FREE_LIMITS: Record<'patient' | 'doctor', UsageLimits> = {
-  patient: { cnn: 5, gan: 1, chat: 7 },
-  doctor:  { cnn: 3, gan: 1, chat: 5 },
-};
 
 export const PLAN_LIMITS: Record<Plan, UsageLimits> = {
-  free:                   { cnn: 0,  gan: 0,  chat: 0  },   // used as sentinel; real free limits come from role
-  patient_basic:          { cnn: 30, gan: 5,  chat: 50 },
-  patient_standard:       { cnn: 100,gan: 15, chat: 100},
-  patient_premium:        { cnn: -1, gan: -1, chat: -1 },
-  doctor_starter:         { cnn: 50, gan: 10, chat: 50 },
-  doctor_professional:    { cnn: 200,gan: 50, chat: 200},
-  doctor_enterprise:      { cnn: -1, gan: -1, chat: -1 },
+  free:                 { cnn: 0,   gan: 0,  chat: 0  },
+  patient_basic:        { cnn: 30,  gan: 5,  chat: 50 },
+  patient_standard:     { cnn: 100, gan: 15, chat: 100},
+  patient_premium:      { cnn: -1,  gan: -1, chat: -1 },
+  doctor_starter:       { cnn: 50,  gan: 10, chat: 50 },
+  doctor_professional:  { cnn: 200, gan: 50, chat: 200},
+  doctor_enterprise:    { cnn: -1,  gan: -1, chat: -1 },
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-const thisMonth = () => new Date().toISOString().slice(0, 7);
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const defaultStored = (): StoredUsage => ({
-  plan: 'free',
-  cnnUsed: 0,
-  ganUsed: 0,
-  chatDate: today(),
-  chatUsed: 0,
-  planMonth: thisMonth(),
-  cnnMonthUsed: 0,
-  ganMonthUsed: 0,
-});
-
-const storageKey = (userId: string) => `usage_${userId}`;
-
-function load(userId: string): StoredUsage {
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return defaultStored();
-    const parsed: StoredUsage = JSON.parse(raw);
-    // reset daily chat counter if date changed
-    if (parsed.chatDate !== today()) {
-      parsed.chatDate = today();
-      parsed.chatUsed = 0;
-    }
-    // reset monthly counters if month changed
-    if (parsed.planMonth !== thisMonth()) {
-      parsed.planMonth = thisMonth();
-      parsed.cnnMonthUsed = 0;
-      parsed.ganMonthUsed = 0;
-    }
-    return parsed;
-  } catch {
-    return defaultStored();
-  }
-}
-
-function save(userId: string, data: StoredUsage) {
-  localStorage.setItem(storageKey(userId), JSON.stringify(data));
-}
+const defaultState = (role: string): UsageState => {
+  const freeLimits = role === 'doctor'
+    ? { cnn: 3, gan: 1, chat: 5 }
+    : { cnn: 5, gan: 1, chat: 7 };
+  return {
+    plan: 'free',
+    planStartedAt: null,
+    planExpiresAt: null,
+    limits: freeLimits,
+    freeLimits,
+    cnnUsed: 0,
+    ganUsed: 0,
+    chatUsed: 0,
+    canUseCNN: true,
+    canUseGAN: true,
+    canUseChat: true,
+  };
+};
 
 const UsageContext = createContext<UsageContextType | null>(null);
 
 export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [stored, setStored] = useState<StoredUsage>(defaultStored);
+  const [state, setState] = useState<UsageState>(() => defaultState(user?.role ?? 'patient'));
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) setStored(load(user._id));
+  const token = () => localStorage.getItem('token');
+
+  const fetchUsage = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/subscription`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState(data);
+      }
+    } catch {
+      // backend unreachable — keep defaults so the UI still works
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
-  const persist = useCallback(
-    (updated: StoredUsage) => {
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
+
+  // Fire-and-forget record — optimistic update first, then sync backend response
+  const record = useCallback(
+    (type: 'cnn' | 'gan' | 'chat') => {
       if (!user) return;
-      setStored(updated);
-      save(user._id, updated);
+
+      // Optimistic UI
+      setState((prev) => {
+        const next = { ...prev };
+        if (type === 'cnn') {
+          next.cnnUsed += 1;
+          next.canUseCNN = next.limits.cnn === -1 ? true : next.cnnUsed < next.limits.cnn;
+        } else if (type === 'gan') {
+          next.ganUsed += 1;
+          next.canUseGAN = next.limits.gan === -1 ? true : next.ganUsed < next.limits.gan;
+        } else {
+          next.chatUsed += 1;
+          next.canUseChat = next.limits.chat === -1 ? true : next.chatUsed < next.limits.chat;
+        }
+        return next;
+      });
+
+      // Sync to backend
+      fetch(`${API}/api/subscription/record`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token()}`,
+        },
+        body: JSON.stringify({ type }),
+      })
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => { if (data) setState(data); })
+        .catch(() => {/* ignore */});
     },
     [user]
   );
 
-  const role = (user?.role ?? 'patient') as 'patient' | 'doctor';
-  const freeLimits = FREE_LIMITS[role];
-  const isPaid = stored.plan !== 'free';
-
-  const limits: UsageLimits = isPaid ? PLAN_LIMITS[stored.plan] : freeLimits;
-
-  // for paid plans compare against monthly counter; for free compare against total counter
-  const canUseCNN =
-    limits.cnn === -1
-      ? true
-      : isPaid
-      ? stored.cnnMonthUsed < limits.cnn
-      : stored.cnnUsed < limits.cnn;
-
-  const canUseGAN =
-    limits.gan === -1
-      ? true
-      : isPaid
-      ? stored.ganMonthUsed < limits.gan
-      : stored.ganUsed < limits.gan;
-
-  const canUseChat =
-    limits.chat === -1 ? true : stored.chatUsed < limits.chat;
-
-  const recordCNN = useCallback(() => {
-    persist({
-      ...stored,
-      cnnUsed: stored.cnnUsed + 1,
-      cnnMonthUsed: stored.cnnMonthUsed + 1,
-    });
-  }, [stored, persist]);
-
-  const recordGAN = useCallback(() => {
-    persist({
-      ...stored,
-      ganUsed: stored.ganUsed + 1,
-      ganMonthUsed: stored.ganMonthUsed + 1,
-    });
-  }, [stored, persist]);
-
-  const recordChat = useCallback(() => {
-    persist({
-      ...stored,
-      chatDate: today(),
-      chatUsed: stored.chatUsed + 1,
-    });
-  }, [stored, persist]);
-
   const upgradePlan = useCallback(
-    (p: Plan) => {
-      persist({
-        ...stored,
-        plan: p,
-        // reset counters on upgrade
-        cnnUsed: 0,
-        ganUsed: 0,
-        chatUsed: 0,
-        planMonth: thisMonth(),
-        cnnMonthUsed: 0,
-        ganMonthUsed: 0,
-      });
+    async (plan: Plan) => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/api/subscription/subscribe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token()}`,
+          },
+          body: JSON.stringify({ plan }),
+        });
+        const data = await res.json();
+        if (res.ok && data.subscription) setState(data.subscription);
+      } finally {
+        setLoading(false);
+      }
     },
-    [stored, persist]
+    [user]
   );
 
-  // current usage numbers to display
-  const cnnUsed = isPaid ? stored.cnnMonthUsed : stored.cnnUsed;
-  const ganUsed = isPaid ? stored.ganMonthUsed : stored.ganUsed;
-  const chatUsed = stored.chatUsed;
+  const cancelPlan = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/subscription/cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.subscription) setState(data.subscription);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   return (
     <UsageContext.Provider
       value={{
-        plan: stored.plan,
-        cnnUsed,
-        ganUsed,
-        chatUsed,
-        limits,
-        canUseCNN,
-        canUseGAN,
-        canUseChat,
-        recordCNN,
-        recordGAN,
-        recordChat,
+        ...state,
+        loading,
+        recordCNN:  () => record('cnn'),
+        recordGAN:  () => record('gan'),
+        recordChat: () => record('chat'),
         upgradePlan,
+        cancelPlan,
+        refresh: fetchUsage,
       }}
     >
       {children}

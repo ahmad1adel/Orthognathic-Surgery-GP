@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import placesRoutes from "./routes/placesRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/places", placesRoutes);
+app.use("/api/subscription", subscriptionRoutes);
 
 // 404 handler
 app.use((req, res) => {

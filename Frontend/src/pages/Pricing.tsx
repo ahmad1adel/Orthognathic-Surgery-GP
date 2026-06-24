@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUsage, Plan, PLAN_LIMITS } from '@/contexts/UsageContext';
-import { Check, Sparkles, Zap, Building2, Star, Crown } from 'lucide-react';
+import { useUsage, Plan } from '@/contexts/UsageContext';
+import { Check, Sparkles, Zap, Building2, Star, Crown, XCircle } from 'lucide-react';
 
 interface PlanDef {
   id: Plan;
@@ -169,28 +169,23 @@ const FeatureRow: React.FC<{ label: string; value: string }> = ({ label, value }
 
 const Pricing: React.FC = () => {
   const { user } = useAuth();
-  const { plan: currentPlan, upgradePlan, cnnUsed, ganUsed, chatUsed, limits } = useUsage();
+  const { plan: currentPlan, upgradePlan, cancelPlan, loading: usageLoading,
+          cnnUsed, ganUsed, chatUsed, freeLimits } = useUsage();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
 
   const role = user?.role ?? 'patient';
   const plans = role === 'doctor' ? DOCTOR_PLANS : PATIENT_PLANS;
 
-  const freeLimits =
-    role === 'doctor'
-      ? { cnn: 3, gan: 1, chat: 5 }
-      : { cnn: 5, gan: 1, chat: 7 };
+  const handleSelect = async (id: Plan) => {
+    await upgradePlan(id);
+    const name = plans.find((p) => p.id === id)?.name ?? id;
+    setSuccess(`You are now on the ${name} plan!`);
+  };
 
-  const handleSelect = (id: Plan) => {
-    setLoading(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      upgradePlan(id);
-      setLoading(false);
-      const name = plans.find((p) => p.id === id)?.name ?? id;
-      setSuccess(`You are now on the ${name} plan!`);
-    }, 1200);
+  const handleCancel = async () => {
+    await cancelPlan();
+    setSuccess('Your subscription has been cancelled. Free tier limits now apply.');
   };
 
   return (
@@ -241,10 +236,25 @@ const Pricing: React.FC = () => {
               plan={plan}
               current={currentPlan}
               onSelect={handleSelect}
-              loading={loading}
+              loading={usageLoading}
             />
           ))}
         </div>
+
+        {/* Cancel subscription */}
+        {currentPlan !== 'free' && (
+          <div className="mt-10 text-center">
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+              onClick={handleCancel}
+              disabled={usageLoading}
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel subscription &amp; return to free tier
+            </Button>
+          </div>
+        )}
 
         {/* Free tier note */}
         <div className="mt-12 text-center text-sm text-muted-foreground">

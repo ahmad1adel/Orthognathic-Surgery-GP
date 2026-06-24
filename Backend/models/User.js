@@ -31,6 +31,32 @@ const userSchema = new mongoose.Schema(
       type: String, // stored as a base64 data URL
       default: "",
     },
+
+    // ── Subscription ──────────────────────────────────────────────
+    plan: {
+      type: String,
+      enum: [
+        "free",
+        "patient_basic", "patient_standard", "patient_premium",
+        "doctor_starter", "doctor_professional", "doctor_enterprise",
+      ],
+      default: "free",
+    },
+    planStartedAt: { type: Date, default: null },
+    planExpiresAt: { type: Date, default: null },
+
+    // Monthly usage counters (reset each calendar month)
+    usageMonth:    { type: String, default: "" },   // "YYYY-MM"
+    cnnMonthUsed:  { type: Number, default: 0 },
+    ganMonthUsed:  { type: Number, default: 0 },
+
+    // Free-tier lifetime counters (never reset; gate is "used < limit")
+    cnnFreeUsed:   { type: Number, default: 0 },
+    ganFreeUsed:   { type: Number, default: 0 },
+
+    // Daily chat counter
+    chatDate:      { type: String, default: "" },   // "YYYY-MM-DD"
+    chatDayUsed:   { type: Number, default: 0 },
   },
   { timestamps: true }
 );
