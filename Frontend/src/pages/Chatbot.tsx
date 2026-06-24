@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Send, Loader2 } from 'lucide-react';
 import { useAuthGate } from '@/contexts/AuthGate';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Source {
   source: string;
@@ -18,6 +19,7 @@ interface ChatMessage {
 }
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || 'http://localhost:5003';
+const PATIENT_CHAT_URL = import.meta.env.VITE_PATIENT_CHAT_URL || 'http://localhost:5004';
 
 const Chatbot: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -26,7 +28,11 @@ const Chatbot: React.FC = () => {
   ]);
   const [loading, setLoading] = useState(false);
   const { requireAuth } = useAuthGate();
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Patients use the lightweight Groq chatbot; doctors use the RAG (document-grounded) bot
+  const isPatient = user?.role === 'patient';
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -37,14 +43,22 @@ const Chatbot: React.FC = () => {
     if (!text || loading) return;
 
     requireAuth(async () => {
+      // Snapshot history (for the patient chatbot, which supports conversation context)
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
+
       setMessages((prev) => [...prev, { role: 'user', content: text }]);
       setMessage('');
       setLoading(true);
+
+      const endpoint = isPatient ? `${PATIENT_CHAT_URL}/chat` : `${RAG_API_URL}/chat`;
+      const payload = isPatient ? { message: text, history } : { message: text };
+      const port = isPatient ? 5004 : 5003;
+
       try {
-        const res = await fetch(`${RAG_API_URL}/chat`, {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -60,7 +74,7 @@ const Chatbot: React.FC = () => {
             content:
               e instanceof Error
                 ? `⚠️ ${e.message}`
-                : '⚠️ Something went wrong. Is the RAG service running on port 5003?',
+                : `⚠️ Something went wrong. Is the chatbot service running on port ${port}?`,
           },
         ]);
       } finally {
