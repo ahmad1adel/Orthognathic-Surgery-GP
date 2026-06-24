@@ -1,8 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Brain, Loader2 } from 'lucide-react';
+import { Upload, Brain, Loader2, Lock } from 'lucide-react';
 import { useAuthGate } from '@/contexts/AuthGate';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUsage } from '@/contexts/UsageContext';
+import PaywallModal from '@/components/PaywallModal';
 
 interface PredictionResult {
   prediction: string;
@@ -18,8 +21,15 @@ const CNNUpload: React.FC = () => {
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requireAuth } = useAuthGate();
+  const { user } = useAuth();
+  const { canUseCNN, cnnUsed, limits, recordCNN } = useUsage();
+
+  const role = user?.role ?? 'patient';
+  const freeLimitLabel = role === 'doctor' ? '3' : '5';
+  const limitDisplay = limits.cnn === -1 ? '∞' : String(limits.cnn);
 
   const onFileSelected = (selected: File | undefined) => {
     if (!selected) return;
@@ -34,7 +44,13 @@ const CNNUpload: React.FC = () => {
       setError('Please choose an X-ray image first.');
       return;
     }
+
     requireAuth(async () => {
+      if (!canUseCNN) {
+        setPaywallOpen(true);
+        return;
+      }
+
       setLoading(true);
       setError('');
       setResult(null);
@@ -48,6 +64,7 @@ const CNNUpload: React.FC = () => {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Prediction failed');
+        recordCNN();
         setResult(data);
       } catch (e) {
         setError(
@@ -64,7 +81,32 @@ const CNNUpload: React.FC = () => {
   return (
     <div className="min-h-screen py-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-center mb-8">CNN Jaw Classification</h1>
+        <h1 className="text-4xl font-bold text-center mb-4">CNN Jaw Classification</h1>
+
+        {/* Usage indicator */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center gap-3 bg-secondary/60 rounded-full px-5 py-2 text-sm">
+            {canUseCNN ? (
+              <>
+                <span className="text-muted-foreground">Analyses used:</span>
+                <span className="font-semibold text-foreground">{cnnUsed} / {limitDisplay}</span>
+                <div className="w-20 h-1.5 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: limits.cnn === -1 ? '10%' : `${Math.min((cnnUsed / limits.cnn) * 100, 100)}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4 text-destructive" />
+                <span className="text-destructive font-medium">
+                  Free limit reached ({freeLimitLabel} analyses)
+                </span>
+              </>
+            )}
+          </div>
+        </div>
 
         <Card>
           <CardHeader>
@@ -74,7 +116,6 @@ const CNNUpload: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Hidden file input */}
             <input
               ref={inputRef}
               type="file"
@@ -83,7 +124,6 @@ const CNNUpload: React.FC = () => {
               onChange={(e) => onFileSelected(e.target.files?.[0])}
             />
 
-            {/* Drop / click zone */}
             <div
               role="button"
               tabIndex={0}
@@ -124,6 +164,11 @@ const CNNUpload: React.FC = () => {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Analyzing…
                 </>
+              ) : !canUseCNN ? (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Upgrade to Analyze
+                </>
               ) : (
                 'Analyze X-Ray'
               )}
@@ -151,7 +196,6 @@ const CNNUpload: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Per-class score bars */}
                   <div className="space-y-2 pt-2">
                     {Object.entries(result.scores).map(([label, score]) => (
                       <div key={label}>
@@ -174,6 +218,13 @@ const CNNUpload: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        feature="CNN Analysis"
+        reason={`You've used all ${freeLimitLabel} free CNN analyses. Upgrade your plan to continue scanning X-rays.`}
+      />
     </div>
   );
 };

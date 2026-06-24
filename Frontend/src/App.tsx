@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthGateProvider } from "./contexts/AuthGate";
+import { UsageProvider } from "./contexts/UsageContext";
 import Navigation from "./components/Navigation";
 
 // Pages
@@ -25,6 +26,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientProfile from "./pages/PatientProfile";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <AuthGateProvider>
+            <UsageProvider>
               <div className="min-h-screen bg-background">
                 <Navigation />
                 <Routes>
@@ -57,9 +60,11 @@ const App = () => (
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
                   <Route path="/patient-profile" element={<PatientProfile />} />
+                  <Route path="/pricing" element={<Pricing />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>
+            </UsageProvider>
             </AuthGateProvider>
           </BrowserRouter>
         </TooltipProvider>

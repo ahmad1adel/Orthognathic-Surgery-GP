@@ -2,9 +2,11 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Lock } from 'lucide-react';
 import { useAuthGate } from '@/contexts/AuthGate';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUsage } from '@/contexts/UsageContext';
+import PaywallModal from '@/components/PaywallModal';
 
 interface Source {
   source: string;
@@ -27,12 +29,15 @@ const Chatbot: React.FC = () => {
     { role: 'assistant', content: "Hello! I'm your AI dental assistant. Ask me anything about orthognathic surgery, jaw conditions, or treatments." },
   ]);
   const [loading, setLoading] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const { requireAuth } = useAuthGate();
   const { user } = useAuth();
+  const { canUseChat, chatUsed, limits, recordChat } = useUsage();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Patients use the lightweight Groq chatbot; doctors use the RAG (document-grounded) bot
   const isPatient = user?.role === 'patient';
+  const freeLimitLabel = isPatient ? '7' : '5';
+  const limitDisplay = limits.chat === -1 ? '∞' : String(limits.chat);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -43,12 +48,17 @@ const Chatbot: React.FC = () => {
     if (!text || loading) return;
 
     requireAuth(async () => {
-      // Snapshot history (for the patient chatbot, which supports conversation context)
+      if (!canUseChat) {
+        setPaywallOpen(true);
+        return;
+      }
+
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
 
       setMessages((prev) => [...prev, { role: 'user', content: text }]);
       setMessage('');
       setLoading(true);
+      recordChat();
 
       const endpoint = isPatient ? `${PATIENT_CHAT_URL}/chat` : `${RAG_API_URL}/chat`;
       const payload = isPatient ? { message: text, history } : { message: text };
@@ -86,7 +96,32 @@ const Chatbot: React.FC = () => {
   return (
     <div className="min-h-screen py-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-center mb-8">AI Dental Assistant</h1>
+        <h1 className="text-4xl font-bold text-center mb-4">AI Dental Assistant</h1>
+
+        {/* Usage indicator */}
+        <div className="flex justify-center mb-6">
+          <div className="flex items-center gap-3 bg-secondary/60 rounded-full px-5 py-2 text-sm">
+            {canUseChat ? (
+              <>
+                <span className="text-muted-foreground">Messages today:</span>
+                <span className="font-semibold text-foreground">{chatUsed} / {limitDisplay}</span>
+                <div className="w-20 h-1.5 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: limits.chat === -1 ? '10%' : `${Math.min((chatUsed / limits.chat) * 100, 100)}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4 text-destructive" />
+                <span className="text-destructive font-medium">
+                  Daily limit reached ({freeLimitLabel} messages/day)
+                </span>
+              </>
+            )}
+          </div>
+        </div>
 
         <Card className="h-96 mb-4">
           <CardContent ref={scrollRef} className="p-4 h-full overflow-y-auto">
@@ -128,17 +163,34 @@ const Chatbot: React.FC = () => {
 
         <div className="flex gap-2">
           <Input
-            placeholder="Ask about dental conditions..."
+            placeholder={canUseChat ? 'Ask about dental conditions…' : 'Daily limit reached — upgrade to continue'}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-            disabled={loading}
+            disabled={loading || !canUseChat}
           />
-          <Button onClick={sendMessage} disabled={loading}>
-            <Send className="h-4 w-4" />
+          <Button onClick={sendMessage} disabled={loading || !canUseChat}>
+            {canUseChat ? <Send className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
           </Button>
         </div>
+
+        {!canUseChat && (
+          <p className="text-center text-sm text-muted-foreground mt-3">
+            Daily limit reached.{' '}
+            <a href="/pricing" className="text-primary underline font-medium">
+              Upgrade your plan
+            </a>{' '}
+            for more messages.
+          </p>
+        )}
       </div>
+
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        feature="AI Chatbot"
+        reason={`You've reached your daily limit of ${freeLimitLabel} messages. Upgrade your plan to send more messages today.`}
+      />
     </div>
   );
 };
