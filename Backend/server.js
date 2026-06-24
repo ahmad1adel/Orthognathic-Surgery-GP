@@ -29,7 +29,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "5mb" })); // allow base64 profile images
 
 // Health check
 app.get("/", (req, res) => {

@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: UserRole;
+  profileImage?: string;
 }
 
 interface AuthResponse {
@@ -20,6 +21,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   signup: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
+  updateProfile: (updates: { name?: string; profileImage?: string }) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -78,6 +80,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(data.user);
   };
 
+  const updateProfile = async (updates: { name?: string; profileImage?: string }) => {
+    const data = await apiRequest<{ user: User }>('/auth/profile', {
+      method: 'PUT',
+      body: updates,
+      auth: true,
+    });
+    setUser(data.user);
+  };
+
   const logout = () => {
     clearToken();
     setUser(null);
@@ -87,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, signup, logout, isAuthenticated }}
+      value={{ user, loading, login, signup, updateProfile, logout, isAuthenticated }}
     >
       {children}
     </AuthContext.Provider>

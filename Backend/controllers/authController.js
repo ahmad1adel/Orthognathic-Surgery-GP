@@ -11,6 +11,7 @@ const sanitize = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  profileImage: user.profileImage || "",
 });
 
 // @desc    Register a new user
@@ -89,4 +90,28 @@ export const login = async (req, res) => {
 // @access  Private
 export const getMe = async (req, res) => {
   return res.status(200).json({ user: sanitize(req.user) });
+};
+
+// @desc    Update the current user's profile (name and/or image)
+// @route   PUT /api/auth/profile
+// @access  Private
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, profileImage } = req.body;
+
+    const updates = {};
+    if (typeof name === "string" && name.trim()) updates.name = name.trim();
+    if (typeof profileImage === "string") updates.profileImage = profileImage;
+
+    // findByIdAndUpdate avoids re-validating the (unselected) password field
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    return res.status(200).json({ user: sanitize(user) });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
 };

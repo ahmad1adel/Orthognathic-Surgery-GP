@@ -35,8 +35,6 @@ const Navigation: React.FC = () => {
   const publicNavItems = [
     { path: '/', label: t('home'), icon: Home },
     { path: '/about', label: t('about'), icon: Info },
-    { path: '/conditions', label: t('conditions'), icon: FileText },
-    { path: '/faqs', label: t('faqs'), icon: HelpCircle },
     { path: '/contact', label: t('contact'), icon: Mail },
   ];
 

@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       enum: ["patient", "doctor"],
       default: "patient",
     },
+    profileImage: {
+      type: String, // stored as a base64 data URL
+      default: "",
+    },
   },
   { timestamps: true }
 );

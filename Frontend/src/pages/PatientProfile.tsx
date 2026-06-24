@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, MessageCircle, MapPin, FileText } from 'lucide-react';
 import { useAuthGate } from '@/contexts/AuthGate';
+import ProfileCard from '@/components/ProfileCard';
 
 const PatientProfile: React.FC = () => {
   const { requireAuth } = useAuthGate();
@@ -11,7 +12,11 @@ const PatientProfile: React.FC = () => {
     <div className="min-h-screen py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold mb-8">Patient Profile</h1>
-        
+
+        <div className="mb-8">
+          <ProfileCard />
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Card>

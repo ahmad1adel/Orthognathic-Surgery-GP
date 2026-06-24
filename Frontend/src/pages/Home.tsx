@@ -2,6 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Brain,
@@ -57,6 +63,23 @@ const Home: React.FC = () => {
     { icon: Scan, value: '95%', label: 'Accuracy Rate' },
     { icon: Award, value: '50+', label: 'Partner Clinics' },
     { icon: Shield, value: '100%', label: 'HIPAA Compliant' }
+  ];
+
+  const conditions = [
+    { title: 'Agnathia', description: 'Absence or severe underdevelopment of the jaw.' },
+    { title: 'Macrognathia', description: 'Abnormally large jaw development.' },
+    { title: 'Micrognathia', description: 'Abnormally small or underdeveloped jaw.' },
+  ];
+
+  const faqs = [
+    {
+      q: 'How accurate is the AI analysis?',
+      a: 'Our AI models achieve 95% accuracy in jaw deformity classification.',
+    },
+    {
+      q: 'Is my data secure?',
+      a: 'Yes, we are 100% HIPAA compliant with end-to-end encryption.',
+    },
   ];
 
   return (
@@ -157,8 +180,35 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Conditions Section */}
       <section className="py-20 bg-secondary/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              Jaw Conditions We Analyze
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Our AI helps identify and assess a range of jaw deformities.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {conditions.map((condition, index) => (
+              <Card key={index} className="hover:scale-105 transition-transform soft-shadow">
+                <CardHeader>
+                  <CardTitle className="text-xl">{condition.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{condition.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
@@ -182,6 +232,29 @@ const Home: React.FC = () => {
               </Card>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* FAQs Section */}
+      <section className="py-20 bg-secondary/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Answers to common questions about our AI platform.
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="w-full">
+            {faqs.map((faq, index) => (
+              <AccordionItem key={index} value={`faq-${index}`}>
+                <AccordionTrigger className="text-left">{faq.q}</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">{faq.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </section>
 
