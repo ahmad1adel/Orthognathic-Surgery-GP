@@ -51,7 +51,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const defaultState = (role: string): UsageState => {
   const freeLimits = role === 'doctor'
     ? { cnn: 3, gan: 1, chat: 5 }
-    : { cnn: 5, gan: 1, chat: 7 };
+    : { cnn: 5, gan: 0, chat: 7 };
   return {
     plan: 'free',
     planStartedAt: null,

@@ -4,7 +4,7 @@ import User from "../models/User.js";
 // cnn / gan: monthly limit for paid plans, lifetime for free (-1 = unlimited)
 // chat: daily limit (-1 = unlimited)
 const FREE_LIMITS = {
-  patient: { cnn: 5,  gan: 1, chat: 7 },
+  patient: { cnn: 5,  gan: 0, chat: 7 },
   doctor:  { cnn: 3,  gan: 1, chat: 5 },
 };
 
